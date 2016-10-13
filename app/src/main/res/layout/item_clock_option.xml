@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="20dp"
+    android:id="@+id/rl_item">
+
+    <TextView
+        android:id="@+id/tv_option_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="時間"
+        android:textSize="30sp"
+        />
+
+
+    <TextView
+        android:id="@+id/tv_option_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tv_option_title"
+        android:layout_marginTop="9dp"
+        android:textSize="25sp"
+        android:textColor="#00BFA5"
+        />
+
+    <TextView
+        android:id="@+id/tv_option_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tv_option_title"
+        android:textSize="25sp"
+        android:textColor="#00BFA5"
+        />
+
+
+    <CheckBox
+        android:id="@+id/cb_option_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        />
+
+
+</RelativeLayout>

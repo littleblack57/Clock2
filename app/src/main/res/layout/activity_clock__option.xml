@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.example.littleblack57.clock.Clock_Option">
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rv_clock_option"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"/>
+
+    <LinearLayout
+        android:id="@+id/ll_option_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/rv_clock_option">
+
+    <Button
+        android:id="@+id/btn_option_ok"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="確定"
+        android:onClick="option_ok"/>
+
+    <Button
+        android:id="@+id/btn_option_delete"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="刪除"
+        android:onClick="option_delete"/>
+
+    <Button
+        android:id="@+id/btn_option_cancel"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:text="取消"
+        android:onClick="option_cancel"
+        />
+
+    </LinearLayout>
+
+</RelativeLayout>
