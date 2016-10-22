@@ -5,7 +5,7 @@ package com.example.littleblack57.clock;
  */
 public class ClockOptionSelectAdapterFactory {
 
-    private static ClockOptionSelectAdapter clockOptionSelectAdapter;
+    private static ClockOptionSelectAdapter m_clockOptionSelectAdapter;
 
     private ClockOptionSelectAdapterFactory(){
 
@@ -13,14 +13,21 @@ public class ClockOptionSelectAdapterFactory {
 
     public static ClockOptionSelectAdapter getClockOptionSelectAdapter(){
 
-        if (clockOptionSelectAdapter == null){
+        if (m_clockOptionSelectAdapter == null){
 
-            clockOptionSelectAdapter = new ClockOptionSelectAdapter();
+            m_clockOptionSelectAdapter = new ClockOptionSelectAdapter();
 
         }
 
-        return clockOptionSelectAdapter;
+        return m_clockOptionSelectAdapter;
 
     }
+
+    public static void setClockOptionSelectAdapter(ClockOptionSelectAdapter clockOptionSelectAdapter){
+
+         m_clockOptionSelectAdapter = clockOptionSelectAdapter;
+
+    }
+
 
 }

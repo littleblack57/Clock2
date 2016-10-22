@@ -38,7 +38,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     public void onBindViewHolder(final MyViewHolder holder, final int position) {
 
 
-        holder.m_tv_text_clock.setText(clockOptionSelectAdapter.toStringClock());
+        holder.m_tv_text_clock.setText(clockOptionSelectAdapter.toStringMainClock(position));
         holder.m_cb_clock_check.setChecked(true);
         selectedDayOfWeekColor(holder,position);
 

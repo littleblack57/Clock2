@@ -55,18 +55,49 @@ public class ClockOptionSelectAdapter implements Serializable{
         return m_minute;
     }
 
+    public String toStringMainClock(int position){
+
+        return toStringMainHour(getHourArrayPosition(position)) + " : "
+                + toStringMainMinute(getMinuteArrayPosition(position));
+
+    }
+
     public String toStringClock(){
 
-        return toStringHour() + " : " + toStringMinute();
+        return toStringHour() + " : "
+                + toStringMinute();
 
+    }
+
+    public String toStringMainHour(int hour){
+
+        if(hour < 10){
+
+            String hour_string = "0" + String.valueOf(hour);
+            return hour_string;
+
+        }
+
+        return String.valueOf(m_hour);
+    }
+
+    public String toStringMainMinute(int minute){
+
+        if(minute < 10){
+
+            return "0" +  String.valueOf(minute);
+
+        }
+
+        return String.valueOf(minute);
     }
 
     public String toStringHour(){
 
         if(m_hour < 10){
 
-            String hour = "0" + String.valueOf(m_hour);
-            return hour;
+            String hour_string = "0" + String.valueOf(m_hour);
+            return hour_string;
 
         }
 

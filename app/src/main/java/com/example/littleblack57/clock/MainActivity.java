@@ -14,9 +14,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -54,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        intitext();
+
         m_rv_clock = (RecyclerView)findViewById(R.id.rv_clock);
         m_checkbox = (CheckBox)m_rv_clock.findViewById(R.id.cb_clock_check);
         m_rv_clock.setHasFixedSize(true);
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
         if(m_clockOptionSelectAdapter == null){
             restoreData();
+            m_clockOptionSelectAdapter = ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter();
             if(m_clockOptionSelectAdapter == null) {
                 m_clockOptionSelectAdapter = ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter();
                 Log.d("666", "ClockOptionSelectAdapter Create");
@@ -73,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
         mAdapter = new RecyclerViewAdapter();
         m_rv_clock.setAdapter(mAdapter);
+
 
         mAdapter.setOnItemClickListener(new RecyclerViewAdapter.OnItemClickListener() {
             @Override
@@ -128,10 +132,23 @@ public class MainActivity extends AppCompatActivity {
 
     public void next(View view) throws FileNotFoundException {
 
-        Log.e("666","m_count = ----->" + String.valueOf(m_clockOptionSelectAdapter.getCount()));
-        File file = getDir(FILENAME,MODE_PRIVATE);
-        Log.d("666",file.getName());
-        Log.d("666",file.getPath());
+//        Log.e("666","m_count = ----->" + String.valueOf(m_clockOptionSelectAdapter.getCount()));
+//        File file = getDir(FILENAME,MODE_PRIVATE);
+//        Log.d("666",file.getName());
+//        Log.d("666",file.getPath());
+//
+        String fileName = "my_file.txt";
+        String data = "123123123";
+
+        try{
+
+            FileOutputStream fos = openFileOutput(fileName,Context.MODE_PRIVATE);
+            fos.write(data.getBytes());
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d("file","filedone");
+        }
 
 
 //        Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER);
@@ -150,6 +167,28 @@ public class MainActivity extends AppCompatActivity {
 //
     }
 
+    private void intitext(){
+
+        String fileName = "my_file.txt";
+
+        try {
+            FileInputStream fis = openFileInput(fileName);
+            byte[] bytes = new byte[1024];
+            StringBuffer sb = new StringBuffer();
+            while ((fis.read(bytes)) != -1){
+
+                sb.append(new String(bytes));
+
+            }
+
+            TextView tv = (TextView)findViewById(R.id.tv_text);
+            tv.setText(sb.toString());
+            fis.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 
 
     @Override
@@ -259,8 +298,7 @@ public class MainActivity extends AppCompatActivity {
             //fos = new FileOutputStream("clockOptionSelect.java");
             oos = new ObjectOutputStream(fos);
             Log.d("666","before saveData count == " + m_clockOptionSelectAdapter.getCount());
-            oos.writeInt(m_clockOptionSelectAdapter.getCount());
-            oos.writeObject(m_clockOptionSelectAdapter);
+            oos.writeObject(ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter());
             Log.e("666","saveCount = " + String.valueOf(m_clockOptionSelectAdapter.getCount()));
 
 
@@ -299,11 +337,11 @@ public class MainActivity extends AppCompatActivity {
         ObjectInputStream ois = null;
         try {
 
-            File file = getDir(FILENAME,MODE_PRIVATE);
+
             fis = openFileInput(FILENAME);
             ois = new ObjectInputStream(fis);
-            m_clockOptionSelectAdapter.setCount(ois.readInt());
-            m_clockOptionSelectAdapter = (ClockOptionSelectAdapter)ois.readObject();
+            ClockOptionSelectAdapterFactory.setClockOptionSelectAdapter((ClockOptionSelectAdapter)ois.readObject());
+
             Log.e("666","restoreData");
             Log.e("666","restoreCount = " + String.valueOf(m_clockOptionSelectAdapter.getCount()));
 
