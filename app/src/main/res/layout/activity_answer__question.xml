@@ -14,30 +14,143 @@
         android:id="@+id/tv_question"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
         android:background="@android:color/darker_gray"
         android:text="123"
-        android:textSize="200sp"
-        android:layout_centerHorizontal="true"/>
+        android:textSize="150sp" />
 
-    <EditText
-        android:id="@+id/et_answer"
-        android:layout_width="300dp"
-        android:layout_height="100dp"
-        android:layout_below="@+id/tv_question"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:inputType="number"
-        />
+    <TextView
+        android:layout_marginTop="10dp"
+        android:id="@+id/tv_answer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="25sp"
+        android:layout_below="@+id/tv_question" />
+
+    <RelativeLayout
+        android:id="@+id/rl_numButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tv_answer"
+        android:layout_marginTop="10dp">
+
+        <Button
+            android:id="@+id/btn_num1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toLeftOf="@+id/btn_num2"
+            android:onClick="clickBtnNum"
+            android:text="1"
+            />
+
+        <Button
+            android:id="@+id/btn_num2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:text="2"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/btn_num2"
+            android:text="3"
+            android:onClick="clickBtnNum"
+            />
+
+        <Button
+            android:id="@+id/btn_num4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num1"
+            android:layout_toLeftOf="@+id/btn_num5"
+            android:text="4"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="5"
+            android:layout_below="@+id/btn_num2"
+            android:layout_centerHorizontal="true"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num3"
+            android:layout_toRightOf="@+id/btn_num5"
+            android:text="6"
+            android:onClick="clickBtnNum"
+            />
+
+        <Button
+            android:id="@+id/btn_num7"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num4"
+            android:layout_toLeftOf="@+id/btn_num8"
+            android:text="7"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num8"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num5"
+            android:layout_centerHorizontal="true"
+            android:text="8"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num9"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num6"
+            android:layout_toRightOf="@id/btn_num8"
+            android:text="9"
+            android:onClick="clickBtnNum"/>
+
+        <Button
+            android:id="@+id/btn_num0"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num8"
+            android:layout_centerHorizontal="true"
+            android:text="0"
+            android:onClick="clickBtnNum"/>
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/btn_num9"
+            android:layout_toRightOf="@id/btn_num0"
+            android:src="@drawable/backspace_icon"
+            android:layout_alignRight="@+id/btn_num9"
+            android:layout_alignBottom="@+id/btn_num0"
+            android:scaleType="centerInside"
+            android:onClick="clickBtnNum"
+            />
+
+
+
+
+    </RelativeLayout>
 
     <Button
         android:id="@+id/btn_ok"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/et_answer"
+        android:layout_below="@+id/rl_numButtons"
         android:layout_centerHorizontal="true"
-        android:text="輸入"
-        android:textSize="20sp"
         android:layout_marginTop="20dp"
-        android:onClick="ok"/>
+        android:onClick="ok"
+        android:text="輸入"
+        android:textSize="20sp" />
 
 </RelativeLayout>

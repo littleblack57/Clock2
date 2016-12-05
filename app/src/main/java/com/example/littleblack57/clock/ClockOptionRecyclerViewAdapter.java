@@ -1,5 +1,6 @@
 package com.example.littleblack57.clock;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,6 +19,7 @@ public class ClockOptionRecyclerViewAdapter extends RecyclerView.Adapter<ClockOp
     OnClockOptionRecyclerViewItemClickListener m_clock_option_item_clicklistener;
     private ClockOptionSelectAdapter clockOptionSelectAdapter
             = ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter();
+    private Context context;
 
 
     @Override
@@ -56,6 +58,7 @@ public class ClockOptionRecyclerViewAdapter extends RecyclerView.Adapter<ClockOp
                 holder.m_tv_option_title.setText("鈴聲");
                 holder.m_cb_option_checkbox.setVisibility(View.GONE);
                 holder.m_tv_option_content.setVisibility(View.GONE);
+                setRingtoneTitle(holder);
                 break;
             case 3:
                 holder.m_tv_option_title.setText("震動");
@@ -102,52 +105,63 @@ public class ClockOptionRecyclerViewAdapter extends RecyclerView.Adapter<ClockOp
 
     }
 
-    private void selectedDateIsChecked(ClockOptionViewHolder holder){
+
+    private void selectedDateIsChecked(ClockOptionViewHolder holder) {
 
         boolean[] selected = clockOptionSelectAdapter.getSelected();
+
         holder.m_tv_option_date.setText("");
 
-                    if(selected[0]) {
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.setText("一");
-                    }
+        if (selected[0]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.setText("一");
+        }
 
-                    if (selected[1]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 二");
-                    }
+        if (selected[1]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 二");
+        }
 
-                    if (selected[2]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 三");
-                    }
+        if (selected[2]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 三");
+        }
 
-                    if (selected[3]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 四");
-                    }
+        if (selected[3]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 四");
+        }
 
-                    if (selected[4]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 五");
-                    }
+        if (selected[4]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 五");
+        }
 
-                    if (selected[5]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 六");
-                    }
+        if (selected[5]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 六");
+        }
 
-                    if (selected[6]){
-                        holder.m_tv_option_date.setVisibility(View.VISIBLE);
-                        holder.m_tv_option_date.append(" 日");
-                    }
-
-
-            }
+        if (selected[6]) {
+            holder.m_tv_option_date.setVisibility(View.VISIBLE);
+            holder.m_tv_option_date.append(" 日");
+        }
 
 
+    }
 
 
+    private void setRingtoneTitle(ClockOptionViewHolder holder){
+
+        holder.m_tv_option_content.setVisibility(View.VISIBLE);
+
+
+        if(clockOptionSelectAdapter.getRingtoneTitle() != null) {
+
+
+            holder.m_tv_option_content.setText(clockOptionSelectAdapter.getRingtoneTitle());
+        }
+    }
 
 
     public static class ClockOptionViewHolder extends RecyclerView.ViewHolder{

@@ -1,9 +1,9 @@
 package com.example.littleblack57.clock;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
@@ -11,60 +11,57 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-     private static final int CREATE_CLOCK_REQUEST = 0;
+    public static final String BUNDLE_KEY_DELETE_VISIBLE
+            = "com.littleblack57.android.com.delete_visible";
+    public static final String BUNDLE_KEY_RINGTONETITLEURI
+            = "com.littleblack57.android.com.ringtone_title_uri";
+    public static final String BUNDLE_KEY_VIBRATE
+            = "com.littleblack57.android.com.vibrate";
+    private static final int CREATE_CLOCK_REQUEST = 0;
     private static final int ITEM_CLOCK_SELECT = 1;
-    private static final int Ringtone = 2;
-    private final String TAG = "ok";
-    private Button m_btn_click;
+    private static final int Ringtone_SELECT = 2;
+    private static ClockOptionSelectAdapter m_clockOptionSelectAdapter;
+    private static String FILENAME = "Data.java";
     private RelativeLayout m_rl_main;
     private RecyclerView m_rv_clock;
     private RecyclerViewAdapter mAdapter;
+    private TextView m_tv_text_clock;
     private int count;
-    public static final String BUNDLE_KEY_DELETE_VISIBLE
-            = "com.littleblack57.android.com.delete_visible";
     private CheckBox m_checkbox;
     private int m_position;
-    private static ClockOptionSelectAdapter m_clockOptionSelectAdapter;
-    private static String FILENAME = "Data.java";
     private Context m_context;
-    private String uri = null;
-
-
-
-
+    private int id;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        intitext();
-
-        m_rv_clock = (RecyclerView)findViewById(R.id.rv_clock);
-        m_checkbox = (CheckBox)m_rv_clock.findViewById(R.id.cb_clock_check);
+        m_rv_clock = (RecyclerView) findViewById(R.id.rv_clock);
+        m_tv_text_clock = (TextView) m_rv_clock.findViewById(R.id.tv_text_clock);
+        m_checkbox = (CheckBox) m_rv_clock.findViewById(R.id.cb_clock_check);
         m_rv_clock.setHasFixedSize(true);
-        m_rv_clock.addItemDecoration(new DividerItemDecoration(MainActivity.this,LinearLayoutManager.VERTICAL));
+        m_rv_clock.addItemDecoration(new DividerItemDecoration(MainActivity.this, LinearLayoutManager.VERTICAL));
 
-        if(m_clockOptionSelectAdapter == null){
+        if (m_clockOptionSelectAdapter == null) {
             restoreData();
             m_clockOptionSelectAdapter = ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter();
-            if(m_clockOptionSelectAdapter == null) {
+            if (m_clockOptionSelectAdapter == null) {
                 m_clockOptionSelectAdapter = ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter();
                 Log.d("666", "ClockOptionSelectAdapter Create");
             }
@@ -80,17 +77,19 @@ public class MainActivity extends AppCompatActivity {
 
         mAdapter.setOnItemClickListener(new RecyclerViewAdapter.OnItemClickListener() {
             @Override
-            public void OnClick(View view,int position) {
+            public void OnClick(View view, int position) {
 
-                Intent intent = new Intent(MainActivity.this,Clock_Option.class);
-                startActivityForResult(intent,ITEM_CLOCK_SELECT);
-
+                final Intent intent = new Intent(MainActivity.this, Clock_Option.class);
+                startActivityForResult(intent, ITEM_CLOCK_SELECT);
+                m_clockOptionSelectAdapter.setButtonVisibilty(true);
                 m_position = position;
                 m_clockOptionSelectAdapter
                         .setIsChecked(m_clockOptionSelectAdapter.getIsCheckedArrayPosition(position));
                 m_clockOptionSelectAdapter.setSelected(m_clockOptionSelectAdapter.getDateSelectedArrayPosition(position));
                 m_clockOptionSelectAdapter.setHour(m_clockOptionSelectAdapter.getHourArrayPosition(position));
                 m_clockOptionSelectAdapter.setMinute(m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                m_clockOptionSelectAdapter.setRingtoneUriString(m_clockOptionSelectAdapter.getRingtoneUriStringArrayPosition(position));
+                m_clockOptionSelectAdapter.setRingtoneTitle(m_clockOptionSelectAdapter.getRingtoneTitleArrayPosition(position));
 
             }
         });
@@ -102,18 +101,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
-
     public void addClock(View view) {
 
-        boolean[] date_selected = new boolean[]{false,false,false,false,false,false,false};
+        boolean[] date_selected = new boolean[]{false, false, false, false, false, false, false};
+        m_clockOptionSelectAdapter.setButtonVisibilty(false);
 
+        Calendar calendar = Calendar.getInstance();
+        m_clockOptionSelectAdapter.setHour(calendar.get(Calendar.HOUR_OF_DAY));
+        m_clockOptionSelectAdapter.setMinute(calendar.get(Calendar.MINUTE));
+        m_clockOptionSelectAdapter.setClockPower(true);
         m_clockOptionSelectAdapter.setIsChecked(false);
         m_clockOptionSelectAdapter.setSelected(date_selected);
-        Intent intent = new Intent(MainActivity.this,Clock_Option.class);
+        m_clockOptionSelectAdapter.setRingtoneTitle(null);
+        Intent intent = new Intent(MainActivity.this, Clock_Option.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        intent.putExtra(BUNDLE_KEY_DELETE_VISIBLE,false);
+        intent.putExtra(BUNDLE_KEY_DELETE_VISIBLE, false);
         startActivityForResult(intent, CREATE_CLOCK_REQUEST);
 
 //
@@ -130,63 +132,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void next(View view) throws FileNotFoundException {
+    public void next(View view) {
 
-//        Log.e("666","m_count = ----->" + String.valueOf(m_clockOptionSelectAdapter.getCount()));
-//        File file = getDir(FILENAME,MODE_PRIVATE);
-//        Log.d("666",file.getName());
-//        Log.d("666",file.getPath());
-//
-        String fileName = "my_file.txt";
-        String data = "123123123";
-
-        try{
-
-            FileOutputStream fos = openFileOutput(fileName,Context.MODE_PRIVATE);
-            fos.write(data.getBytes());
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d("file","filedone");
-        }
-
-
-//        Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER);
-//        intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE,RingtoneManager.TYPE_ALARM);
-//        intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE,"Select tone");
-//        if(uri != null){
-//
-//            intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,Uri.parse(uri));
-//
-//        }else {
-//
-//            intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,(Uri)null);
-//
-//        }
-//        startActivityForResult(intent, Ringtone);
-//
-    }
-
-    private void intitext(){
-
-        String fileName = "my_file.txt";
-
-        try {
-            FileInputStream fis = openFileInput(fileName);
-            byte[] bytes = new byte[1024];
-            StringBuffer sb = new StringBuffer();
-            while ((fis.read(bytes)) != -1){
-
-                sb.append(new String(bytes));
-
-            }
-
-            TextView tv = (TextView)findViewById(R.id.tv_text);
-            tv.setText(sb.toString());
-            fis.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
     }
 
@@ -195,34 +142,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(resultCode != RESULT_OK){
-            return;
-        }else {
 
-            Uri uri = data.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
-            Log.d("555","123123123"+uri);
-            Toast.makeText(m_context,uri+"",Toast.LENGTH_LONG).show();
-            if(uri != null){
-                switch (requestCode){
-
-                    case Ringtone:
-                        RingtoneManager
-                                .setActualDefaultRingtoneUri(this,RingtoneManager.TYPE_RINGTONE,uri);
-                        Log.d("ok","123123123"+uri);
-                        break;
-
-                }
-            }
-
-        }
-
-
-        if(requestCode == CREATE_CLOCK_REQUEST){
-            if(resultCode == RESULT_OK){
+        if (requestCode == CREATE_CLOCK_REQUEST) {
+            if (resultCode == RESULT_OK) {
 
                 Bundle bundle = data.getExtras();
                 count = bundle.getInt(Clock_Option.BUNDLE_KEY_RECYCLERVIEW_COUNT);
-                if(count == 1) {
+
+                if (count == 1) {
                     mAdapter.addItem();
                     int a = m_clockOptionSelectAdapter.getCount();
                     m_clockOptionSelectAdapter.setCount(a + 1);
@@ -232,39 +159,56 @@ public class MainActivity extends AppCompatActivity {
                     m_clockOptionSelectAdapter.addDateSelectedArray();
                     m_clockOptionSelectAdapter.addHourArray();
                     m_clockOptionSelectAdapter.addMinuteArray();
+                    m_clockOptionSelectAdapter.addRingtoneTitleArray();
+                    m_clockOptionSelectAdapter.addRingtoneUriStringArray();
+                    m_clockOptionSelectAdapter.addClockPowerArray();
+
+                    createClockAlarmRepeat();
                     saveData();
 
-                    }
+                }
 
             }
 
 
-
-
-        }else if(requestCode == ITEM_CLOCK_SELECT){
-            if(resultCode == RESULT_OK){
+        } else if (requestCode == ITEM_CLOCK_SELECT) {
+            if (resultCode == RESULT_OK) {
 
                 Bundle bundle = data.getExtras();
                 count = bundle.getInt(Clock_Option.BUNDLE_KEY_RECYCLERVIEW_COUNT);
-                if(count == -1){
+                if (count == -1) {
+
+                    deleteClockAlarm();
+
 
                     mAdapter.deleteItem(m_position);
-                    m_clockOptionSelectAdapter.setCount((m_clockOptionSelectAdapter.getCount())-1);
+                    mAdapter.notifyItemRemoved(m_position);
+                    m_clockOptionSelectAdapter.setCount((m_clockOptionSelectAdapter.getCount()) - 1);
                     m_clockOptionSelectAdapter.deleteIsCheckedArrayPosition(m_position);
                     m_clockOptionSelectAdapter.deleteDateSelectedArrayPosition(m_position);
                     m_clockOptionSelectAdapter.deleteHourArray(m_position);
                     m_clockOptionSelectAdapter.deleteMinuteArray(m_position);
+                    m_clockOptionSelectAdapter.removeIdArrayPosition(m_position);
+                    m_clockOptionSelectAdapter.deleteRingtoneTitleArrayPosition(m_position);
+                    m_clockOptionSelectAdapter.deleteRingtoneUriStringArrayPostion(m_position);
+                    m_clockOptionSelectAdapter.deleteClockPowerArrayPosition(m_position);
+
                     saveData();
 
-                }else if(count == 1){
+                } else if (count == 1) {
 
                     Boolean ischecked = bundle.getBoolean(Clock_Option.BUMDLE_KEY_CHECKBOX_CHECKED);
-                    m_clockOptionSelectAdapter.setIsCheckedArrayPosition(m_position,ischecked);
-                    m_clockOptionSelectAdapter.setDateSelectedArrayPosition(m_position,m_clockOptionSelectAdapter.getSelected());
-                    m_clockOptionSelectAdapter.setHourArrayPosition(m_position,m_clockOptionSelectAdapter.getHour());
-                    m_clockOptionSelectAdapter.setMinuteArrayPosition(m_position,m_clockOptionSelectAdapter.getMinute());
+
+                    setClockAlarmRepeat();
+
+                    m_clockOptionSelectAdapter.setIsCheckedArrayPosition(m_position, ischecked);
+                    m_clockOptionSelectAdapter.setDateSelectedArrayPosition(m_position, m_clockOptionSelectAdapter.getSelected());
+                    m_clockOptionSelectAdapter.setHourArrayPosition(m_position, m_clockOptionSelectAdapter.getHour());
+                    m_clockOptionSelectAdapter.setMinuteArrayPosition(m_position, m_clockOptionSelectAdapter.getMinute());
+                    m_clockOptionSelectAdapter.setRingtoneTitleArray(m_position);
+                    m_clockOptionSelectAdapter.setRingtoneUriStringArrayPosition(m_position);
+                    m_clockOptionSelectAdapter.setClockPowerArrayPosition(m_position, true);
                     mAdapter.notifyItemChanged(m_position);
-                    Log.d("ok","m_position = " + String.valueOf(m_position));
                     saveData();
 
                 }
@@ -272,20 +216,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-         }
-
+    }
 
 
     @Override
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
         super.onSaveInstanceState(outState, outPersistentState);
-        Log.d("666","UI_save");
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        Log.d("666","UI_restore");
     }
 
     private void saveData() {
@@ -293,34 +234,28 @@ public class MainActivity extends AppCompatActivity {
         FileOutputStream fos;
         ObjectOutputStream oos = null;
         try {
-            Log.e("666","saveData");
-            fos = openFileOutput(FILENAME,Context.MODE_PRIVATE);
-            //fos = new FileOutputStream("clockOptionSelect.java");
+
+            fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
             oos = new ObjectOutputStream(fos);
-            Log.d("666","before saveData count == " + m_clockOptionSelectAdapter.getCount());
             oos.writeObject(ClockOptionSelectAdapterFactory.getClockOptionSelectAdapter());
-            Log.e("666","saveCount = " + String.valueOf(m_clockOptionSelectAdapter.getCount()));
 
 
+        } catch (java.io.IOException e) {
 
-
-        } catch (java.io.IOException e){
-
-            Log.e("666",e.toString());
             e.printStackTrace();
+            Log.e("saveErr", e.toString());
 
         } finally {
 
-            if(oos != null){
+            if (oos != null) {
 
-                try{
+                try {
 
                     oos.close();
-                    Log.d("666","outputstreamClose!!!");
 
-                } catch (IOException e){
+                } catch (IOException e) {
 
-                    Log.e("666",e.toString());
+                    Log.e("saveErr", e.toString());
 
                 }
 
@@ -328,40 +263,34 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-
     }
 
-    private void restoreData(){
+    private void restoreData() {
 
         FileInputStream fis = null;
         ObjectInputStream ois = null;
         try {
 
-
             fis = openFileInput(FILENAME);
             ois = new ObjectInputStream(fis);
-            ClockOptionSelectAdapterFactory.setClockOptionSelectAdapter((ClockOptionSelectAdapter)ois.readObject());
+            ClockOptionSelectAdapterFactory.setClockOptionSelectAdapter((ClockOptionSelectAdapter) ois.readObject());
 
-            Log.e("666","restoreData");
-            Log.e("666","restoreCount = " + String.valueOf(m_clockOptionSelectAdapter.getCount()));
+        } catch (Exception e) {
 
-        } catch (Exception e){
-
-            Log.d("666",e.toString());
             e.printStackTrace();
+            Log.e("restoreErr", e.toString());
 
         } finally {
 
-            if(ois != null){
+            if (ois != null) {
 
-                try{
+                try {
 
                     ois.close();
-                    Log.d("666","inputstreamClose!!!");
 
-                }catch (IOException e){
+                } catch (IOException e) {
 
-                    Log.e("666",e.toString());
+                    Log.e("restoreErr", e.toString());
 
                 }
 
@@ -371,8 +300,1157 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void setClockAlarm() {
 
 
+        Intent intent = new Intent(this, PlayReceiver.class);
+        intent.putExtra("msg", "ring");
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+        calendar.set(Calendar.SECOND, 0);
 
+        if (calendar.before(Calendar.getInstance())) {
+
+            calendar.add(Calendar.HOUR, 24);
+
+        }
+
+
+        id = m_clockOptionSelectAdapter.getId();
+        m_clockOptionSelectAdapter.setIdArray(id);
+        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+
+        Log.d("alarm", "alarm set successful"
+                + String.valueOf(m_clockOptionSelectAdapter.getHour()) + " : "
+                + String.valueOf(m_clockOptionSelectAdapter.getMinute()));
+
+        Date date = calendar.getTime();
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Log.d("time11", df.format(date));
+
+
+    }
+
+    public void createClockAlarmRepeat() {
+
+        boolean[] selected_array = m_clockOptionSelectAdapter.getSelected();
+        int[] id_group = m_clockOptionSelectAdapter.getIdGroup();
+        boolean date_selected = false;
+        for (int i = 0; i < selected_array.length; i++) {
+            switch (i) {
+                case 0:
+                    if (selected_array[0]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "一  --->  " + String.valueOf(difference_day));
+                            Date date = calendar.getTime();
+                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                            Log.d("time11", "pending is change  ---->" + df.format(date));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[0] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 1:
+                    if (selected_array[1]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.TUESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "二  ---> " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[1] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 2:
+                    if (selected_array[2]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "三  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[2] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 3:
+                    if (selected_array[3]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.THURSDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "四  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[3] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 4:
+                    if (selected_array[4]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[4] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 5:
+                    if (selected_array[5]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "六  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[5] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 6:
+                    if (selected_array[6]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "日  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = m_clockOptionSelectAdapter.getId();
+                        m_clockOptionSelectAdapter.setIdArray(id);
+                        id_group[6] = id;
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+            }
+
+
+        }
+
+        if (!date_selected) {
+
+            Intent intent = new Intent(this, PlayReceiver.class);
+            intent.putExtra("msg", "ring");
+            intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+            intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+            calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+            calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+            calendar.set(Calendar.SECOND, 0);
+
+            if (calendar.before(Calendar.getInstance())) {
+
+                long set_time = calendar.getTimeInMillis();
+                long now_time = Calendar.getInstance().getTimeInMillis();
+                int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                calendar.add(Calendar.HOUR, 24);
+
+                Log.d("test_time", "一  --->  " + String.valueOf(difference_day));
+                Date date = calendar.getTime();
+                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                Log.d("time11", "pending is change  ---->" + df.format(date));
+
+            }
+
+            Date date = calendar.getTime();
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+            id = m_clockOptionSelectAdapter.getId();
+            m_clockOptionSelectAdapter.setIdArray(id);
+            id_group[0] = id;
+
+            Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+            PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+            alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+
+        }
+        m_clockOptionSelectAdapter.setIdGroup(id_group);
+        m_clockOptionSelectAdapter.addIdGroupArray();
+    }
+
+    public void deleteClockAlarm() {
+
+        int[] id_group = m_clockOptionSelectAdapter.getIdGroupArray(m_position);
+        for (int id : id_group) {
+
+            Intent intent = new Intent(this, PlayReceiver.class);
+            Calendar calendar = Calendar.getInstance();
+            AlarmManager alarmManager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            alarmManager.cancel(pendingIntent);
+
+        }
+
+    }
+
+    public void setClockAlarmRepeat() {
+
+        boolean[] selected_array = m_clockOptionSelectAdapter.getSelected();
+        int[] id_group = m_clockOptionSelectAdapter.getIdGroupArray(m_position);
+        boolean date_selected = false;
+        for (int i = 0; i < selected_array.length; i++) {
+            switch (i) {
+                case 0:
+                    if (selected_array[0]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+                case 1:
+                    if (selected_array[1]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.TUESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+                case 2:
+                    if (selected_array[2]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+                case 3:
+                    if (selected_array[3]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.THURSDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+                case 4:
+                    if (selected_array[4]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+
+                    break;
+                case 5:
+                    if (selected_array[5]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+                case 6:
+                    if (selected_array[6]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        if (id_group[i] == 0) {
+
+                            id = m_clockOptionSelectAdapter.getId();
+                            m_clockOptionSelectAdapter.setIdArray(id);
+
+                        } else {
+
+                            id_group[i] = id;
+
+                        }
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    } else {
+
+
+                    }
+                    break;
+            }
+
+        }
+
+        if (!date_selected) {
+
+            Intent intent = new Intent(this, PlayReceiver.class);
+            intent.putExtra("msg", "ring");
+            intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+            intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+            calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+            calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+            calendar.set(Calendar.SECOND, 0);
+
+            if (calendar.before(Calendar.getInstance())) {
+
+                long set_time = calendar.getTimeInMillis();
+                long now_time = Calendar.getInstance().getTimeInMillis();
+                int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                calendar.add(Calendar.HOUR, 24);
+
+                Log.d("test_time", "一  --->  " + String.valueOf(difference_day));
+                Date date = calendar.getTime();
+                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                Log.d("time11", "pending is change  ---->" + df.format(date));
+
+            }
+
+            Date date = calendar.getTime();
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+            id = m_clockOptionSelectAdapter.getId();
+            m_clockOptionSelectAdapter.setIdArray(id);
+            id_group[0] = id;
+
+            Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+            PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+            alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+
+        }
+
+        m_clockOptionSelectAdapter.setIdGroup(id_group);
+        m_clockOptionSelectAdapter.setIdGroupArray(m_position, id_group);
+
+    }
+
+    public void clockPower(View view) {
+
+        int position = (int) view.getTag();
+
+        boolean b = m_clockOptionSelectAdapter.getClockPowerArrayPosition(position);
+        Log.d("CheckBox", "No." + String.valueOf(position) + "  CheckBox Change--->" + String.valueOf(b));
+        if (b) {
+
+            turnOnClockAlarmRepeat(position);
+
+
+        } else {
+
+            turnOffClockAlarm(position);
+
+        }
+
+
+    }
+
+    public void turnOnClockAlarmRepeat(int position) {
+
+        boolean[] selected_array = m_clockOptionSelectAdapter.getDateSelectedArrayPosition(position);
+        int[] id_group = m_clockOptionSelectAdapter.getIdGroupArray(position);
+        int id;
+        boolean date_selected = false;
+
+        for (int i = 0; i < selected_array.length; i++) {
+            switch (i) {
+                case 0:
+                    if (selected_array[0]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "一  --->  " + String.valueOf(difference_day));
+                            Date date = calendar.getTime();
+                            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                            Log.d("time11", "pending is change  ---->" + df.format(date));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[0];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 1:
+                    if (selected_array[1]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.TUESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "二  ---> " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[1];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 2:
+                    if (selected_array[2]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.WEDNESDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "三  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[2];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 3:
+                    if (selected_array[3]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.THURSDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "四  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[3];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 4:
+                    if (selected_array[4]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[4];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+
+                    break;
+                case 5:
+                    if (selected_array[5]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SATURDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "六  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[5];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+                case 6:
+                    if (selected_array[6]) {
+
+                        date_selected = true;
+                        Intent intent = new Intent(this, PlayReceiver.class);
+                        intent.putExtra("msg", "ring");
+                        intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                        intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                        calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHourArrayPosition(position));
+                        calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinuteArrayPosition(position));
+                        calendar.set(Calendar.SECOND, 0);
+
+                        if (calendar.before(Calendar.getInstance())) {
+
+                            long set_time = calendar.getTimeInMillis();
+                            long now_time = Calendar.getInstance().getTimeInMillis();
+                            int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                            calendar.add(Calendar.HOUR, 7 * 24);
+
+                            Log.d("test_time", "日  --->  " + String.valueOf(difference_day));
+
+                        }
+
+                        Date date = calendar.getTime();
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                        Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                        id = id_group[6];
+
+                        Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                        PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                        AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+//                        alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+                        alarm.setRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), 7 * (1000 * 60 * 60 * 24), pending);
+
+                    }
+                    break;
+            }
+
+            if (!date_selected) {
+
+                Intent intent = new Intent(this, PlayReceiver.class);
+                intent.putExtra("msg", "ring");
+                intent.putExtra(BUNDLE_KEY_RINGTONETITLEURI, m_clockOptionSelectAdapter.getRingtoneUriString());
+                intent.putExtra(BUNDLE_KEY_VIBRATE, m_clockOptionSelectAdapter.getIsChecked());
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                calendar.set(Calendar.HOUR_OF_DAY, m_clockOptionSelectAdapter.getHour());
+                calendar.set(Calendar.MINUTE, m_clockOptionSelectAdapter.getMinute());
+                calendar.set(Calendar.SECOND, 0);
+
+                if (calendar.before(Calendar.getInstance())) {
+
+                    long set_time = calendar.getTimeInMillis();
+                    long now_time = Calendar.getInstance().getTimeInMillis();
+                    int difference_day = (int) ((now_time - set_time) / (1000 * 60 * 60 * 24));
+                    calendar.add(Calendar.HOUR, 24);
+
+                    Log.d("test_time", "一  --->  " + String.valueOf(difference_day));
+                    Date date = calendar.getTime();
+                    SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                    Log.d("time11", "pending is change  ---->" + df.format(date));
+
+                }
+
+                Date date = calendar.getTime();
+                SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+                Log.d("test_time", "pending is change  ---->" + df.format(date));
+
+                id = id_group[0];
+
+                Log.d("test_id", "id  ---->" + String.valueOf(id));
+
+                PendingIntent pending = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+                AlarmManager alarm = (AlarmManager) m_context.getSystemService(Context.ALARM_SERVICE);
+                alarm.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pending);
+
+            }
+
+
+        }
+    }
+
+    public void turnOffClockAlarm(int position) {
+
+        int[] id_group = m_clockOptionSelectAdapter.getIdGroupArray(position);
+        for (int id : id_group) {
+
+            Intent intent = new Intent(this, PlayReceiver.class);
+            Calendar calendar = Calendar.getInstance();
+            AlarmManager alarmManager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(this, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+            alarmManager.cancel(pendingIntent);
+
+        }
+
+    }
 
 }

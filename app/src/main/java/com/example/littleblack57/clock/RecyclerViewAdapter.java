@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -39,7 +40,29 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
 
         holder.m_tv_text_clock.setText(clockOptionSelectAdapter.toStringMainClock(position));
-        holder.m_cb_clock_check.setChecked(true);
+        holder.m_cb_clock_check.setTag(position);
+        holder.m_cb_clock_check.setChecked(clockOptionSelectAdapter.getClockPowerArrayPosition(position));
+        holder.m_cb_clock_check.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                clockOptionSelectAdapter.setClockPower(isChecked);
+                clockOptionSelectAdapter.setClockPowerArrayPosition(position,isChecked);
+                if(!isChecked){
+
+                    holder.m_tv_text_clock.setTextColor(Color.DKGRAY);
+
+                }else {
+
+                    holder.m_tv_text_clock.setTextColor(Color.parseColor("#00BFA5"));
+
+
+                }
+
+            }
+        });
+
+        holder.m_tv_month.setVisibility(View.GONE);
         selectedDayOfWeekColor(holder,position);
 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -191,6 +214,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     public interface OnItemClickListener {
         void OnClick(View view,int position);
     }
+
+
 
     public static class MyViewHolder extends RecyclerView.ViewHolder {
 

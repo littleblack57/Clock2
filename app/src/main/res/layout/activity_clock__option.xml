@@ -13,13 +13,14 @@
         android:id="@+id/rv_clock_option"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"/>
+        android:background="@android:color/white"
+        android:layout_above="@+id/ll_option_button"/>
 
     <LinearLayout
         android:id="@+id/ll_option_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/rv_clock_option">
+        android:layout_alignParentBottom="true">
 
     <Button
         android:id="@+id/btn_option_ok"
